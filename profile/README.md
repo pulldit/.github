@@ -2,8 +2,6 @@
 
 <img src="https://raw.githubusercontent.com/pulldit/.github/main/profile/banner.webp" alt="Pulldit — download Reddit images, GIFs & videos in your browser" width="100%" />
 
-# Pulldit
-
 **Download Reddit images, GIFs & videos — entirely in your browser.**
 No account. No tracking. No backend storing your data. Just a static page.
 
