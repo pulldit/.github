@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/pulldit/pulldit.github.io/main/assets/logo.svg" width="96" height="96" alt="Pulldit logo" />
+<img src="https://raw.githubusercontent.com/pulldit/.github/main/profile/banner.webp" alt="Pulldit — download Reddit images, GIFs & videos in your browser" width="100%" />
 
 # Pulldit
 
