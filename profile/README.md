@@ -24,8 +24,9 @@ static web server. All work — fetching listings, previewing media, packaging Z
 in the visitor's browser.
 
 The original relied on a third-party CORS proxy (`allOrigins`) that could see all your
-traffic. This rewrite removes that dependency and gives you **three explicit modes**, so you
-choose your own privacy/convenience trade-off.
+traffic. This rewrite removes that hard dependency and gives you **explicit, switchable modes**,
+so you choose your own privacy/convenience trade-off — including an optional **browser extension**
+that fetches everything from your own IP (the most reliable, proxy-free path).
 
 ## Features
 
@@ -47,12 +48,22 @@ sends CORS headers. Reddit's image CDN (`i.redd.it`) does **not**. So images can
 
 | Mode | Bulk ZIP | Who sees your traffic | Setup |
 |------|:--------:|-----------------------|-------|
+| **Pulldit Extension** | ✅ | Only you (your own IP, no relay) | One-time install — see [`extension/`](https://github.com/pulldit/pulldit.github.io/blob/main/extension/README.md) |
 | **Direct** (default) | ❌ | Only Reddit | None — most private |
 | **Your Cloudflare Worker** | ✅ | Only you (your own proxy) | ~5 min, free — see [`worker/`](https://github.com/pulldit/pulldit.github.io/blob/main/worker/README.md) |
 | **Public CORS proxy** | ✅ | A third party relays it | None — most convenient |
 
 > In **Direct** mode you still get full previews and one-by-one downloads. Only the *bulk ZIP*
-> requires a proxy, and the recommended way to get it safely is your own Cloudflare Worker.
+> requires reading raw bytes, which the browser blocks cross-origin.
+
+### Most reliable: the Pulldit Bridge extension
+
+Reddit also returns `403 Blocked` to **datacenter IPs** — where every public proxy and even a
+Cloudflare Worker live — so those are best-effort. The optional [**Pulldit Bridge**](https://github.com/pulldit/pulldit.github.io/blob/main/extension/README.md)
+extension sidesteps both walls: its background worker is exempt from CORS and runs from **your own
+residential IP**, so it fetches the listing JSON (no 403) *and* reads `i.redd.it` bytes (no CORS).
+The website detects the extension automatically and unlocks an **“Extension”** mode — same page,
+same UI, full proxy-free ZIP. It is locked to Reddit/imgur hosts and only serves the Pulldit page.
 
 ## Run locally
 
@@ -70,9 +81,9 @@ This repo ships a workflow that does it automatically:
 
 1. Push to `main`.
 2. In **Settings → Pages**, set **Source = GitHub Actions**.
-3. The [`deploy`](https://github.com/pulldit/pulldit.github.io/blob/main/.github/workflows/deploy.yml) workflow stages the static files and publishes
-   them. (It uploads only `index.html`, `styles.css`, `assets/`, `src/`, `vendor/` — never
-   `node_modules`.)
+3. The [`deploy`](https://github.com/pulldit/pulldit.github.io/blob/main/.github/workflows/deploy.yml) workflow stages the static files, packages the
+   browser extension, and publishes everything. (It uploads only `index.html`, `styles.css`,
+   `assets/`, `src/`, `vendor/`, and the generated `pulldit-bridge.zip` — never `node_modules`.)
 
 A `.nojekyll` file is included so Pages serves the files as-is.
 
@@ -90,6 +101,10 @@ A `.nojekyll` file is included so Pages serves the files as-is.
 - **Resource guards:** per-request timeouts and a streamed hard size cap on every download.
 - **Safe DOM:** all rendering uses `createElement` + `textContent`; user/Reddit data is never
   injected as HTML.
+- **Least-privilege extension:** the optional [browser extension](https://github.com/pulldit/pulldit.github.io/blob/main/extension/README.md) requests
+  only `host_permissions` for Reddit/imgur (no tabs, storage, or `<all_urls>`), enforces the same
+  host allowlist in its background worker, and only serves requests from the Pulldit page — it is
+  **not an open proxy**.
 
 ## Project structure
 
@@ -102,10 +117,12 @@ src/
   url-guard.js          # URL/host validation, IP checks, filename sanitizing
   reddit.js             # input parsing + listing normalization
   proxy.js              # proxy modes + hardened fetch (timeout, size cap)
+  bridge-client.js      # page-side client for the optional browser extension
   download.js           # single + ZIP downloads
   app.js                # UI controller
 vendor/                 # JSZip + FileSaver (pinned, local)
 worker/                 # optional self-hosted secure proxy (Cloudflare)
+extension/              # optional MV3 browser extension (proxy-free ZIP via your own IP)
 test/                   # vitest suites
 .github/workflows/      # CI, Pages deploy, CodeQL, security scans
 ```
@@ -116,6 +133,7 @@ test/                   # vitest suites
 npm test          # run the vitest suites
 npm run check     # syntax-check every shipped JS file
 npm run build     # check + test (the CI gate)
+npm run pack:ext  # package extension/ into pulldit-bridge.zip
 ```
 
 ## Disclaimer & responsible use
